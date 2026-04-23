@@ -1,0 +1,64 @@
+// ============================================================
+// YFW Haven Grand — dbdiagram.io Schema
+// Paste this at: https://dbdiagram.io/d
+// ============================================================
+
+Table rooms {
+  room_id         int         [pk, increment, note: "Primary Key"]
+  room_type       varchar(50) [not null, note: "Y Room / F Room / W Suite / Y Premium / F Pro / W Pro Max"]
+  price           int         [not null, note: "Price per night in IDR"]
+  total_rooms     int         [not null, default: 5]
+  available_rooms int         [not null, default: 5, note: "Real-time availability — decrements on check-in, increments on check-out"]
+}
+
+Table guests {
+  guest_id    int          [pk, increment, note: "Primary Key"]
+  guest_name  varchar(100) [not null]
+  email       varchar(150) [note: "Contact email"]
+  phone       varchar(25)  [not null]
+  created_at  timestamp    [default: `current_timestamp()`]
+}
+
+Table bookings {
+  booking_id  int         [pk, increment, note: "Primary Key"]
+  guest_id    int         [not null, ref: > guests.guest_id]
+  room_id     int         [not null, ref: > rooms.room_id]
+  check_in    datetime    [not null, default: `current_timestamp()`, note: "Set on booking creation"]
+  check_out   datetime    [note: "Set on checkout — triggers payment calc"]
+  status      varchar(50) [not null, default: "Checked In", note: "Checked In | Checked Out"]
+  created_at  timestamp   [default: `current_timestamp()`]
+}
+
+Table reservations {
+  reservation_id   int         [pk, increment, note: "Primary Key"]
+  guest_id         int         [not null, ref: > guests.guest_id]
+  room_id          int         [not null, ref: > rooms.room_id]
+  reserve_date     date        [not null, note: "Date reservation was made"]
+  expected_checkin date        [note: "Expected arrival date"]
+  status           varchar(50) [not null, default: "Pending", note: "Pending | Confirmed | Cancelled"]
+  created_at       timestamp   [default: `current_timestamp()`]
+}
+
+Table payments {
+  payment_id  int         [pk, increment, note: "Primary Key"]
+  booking_id  int         [not null, ref: > bookings.booking_id]
+  amount      bigint      [not null, note: "Auto-calculated: nights × room price"]
+  nights      int         [not null, default: 1, note: "Calculated: DATEDIFF(check_out, check_in)"]
+  method      varchar(50) [not null, default: "Cash", note: "Cash | Transfer | Card"]
+  paid_at     timestamp   [default: `current_timestamp()`]
+}
+
+Table visitors {
+  visitor_id  int          [pk, increment, note: "Primary Key"]
+  name        varchar(100) [not null]
+  purpose     varchar(150) [note: "Meeting / Delivery / etc."]
+  check_in    datetime     [not null, default: `current_timestamp()`]
+  check_out   datetime     [note: "Null = still inside"]
+}
+
+// ── Relationships ──────────────────────────────────────────
+// bookings.guest_id → guests.guest_id (Many-to-One)
+// bookings.room_id  → rooms.room_id   (Many-to-One)
+// payments.booking_id → bookings.booking_id (One-to-One)
+// reservations.guest_id → guests.guest_id  (Many-to-One)
+// reservations.room_id  → rooms.room_id    (Many-to-One)
